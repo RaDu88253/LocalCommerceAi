@@ -5,9 +5,12 @@ import './Header.css';
 function Header() {
     return (
         <header className="app-header">
+            {/* Logo on the left */}
+            <div className="logo">
+                <Link to="/" className="logo-link">find.</Link>
+            </div>
+            {/* Navigation links on the right */}
             <nav className="header-nav">
-                {/* We use React Router's Link component for navigation */}
-                <Link to="/">Main</Link>
                 <Link to="/login">Login</Link>
                 <Link to="/register">Register</Link>
             </nav>
