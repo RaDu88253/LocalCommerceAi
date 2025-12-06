@@ -1,17 +1,50 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import API_URL from './config'; // Importăm URL-ul backend-ului
 
 function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implementează apelul către backend pentru autentificare.
-    // Logica de mai jos este doar un placeholder pentru dezvoltare.
-    console.log("Login attempt with:", { email, password });
-    alert("Backend is not connected yet!");
+    setError(null);
+
+    // Backend-ul se așteaptă la date de tip 'form-data' pentru acest endpoint,
+    // nu JSON, deoarece folosește OAuth2PasswordRequestForm.
+    const formData = new URLSearchParams();
+    formData.append('username', email); // Standardul OAuth2 folosește 'username', chiar dacă noi trimitem un email
+    formData.append('password', password);
+
+    try {
+      const response = await fetch(`${API_URL}/api/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Authentication failed');
+      }
+
+      const data = await response.json();
+      console.log('Login successful!', data);
+
+      // Salvăm token-ul în localStorage pentru a-l folosi ulterior
+      localStorage.setItem('accessToken', data.access_token);
+      
+      alert('Login reușit! Token-ul a fost salvat.');
+      // Aici ai putea redirecționa utilizatorul, de ex. cu useNavigate()
+
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message);
+    }
   };
 
   return (
@@ -102,6 +135,7 @@ function LoginPage() {
               </label>
               <div className="mt-1">
                 <input
+                  aria-label="Parolă"
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
@@ -135,6 +169,8 @@ function LoginPage() {
                 </a>
               </div>
             </div>
+
+            {error && <p className="text-center text-sm text-red-600">{error}</p>}
 
             <div>
               <button

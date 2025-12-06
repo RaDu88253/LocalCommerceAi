@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import API_URL from './config'; // Importăm URL-ul backend-ului
 
 // --- Flag Components ---
 const RomaniaFlag = () => (
@@ -94,6 +95,7 @@ function RegisterPage() {
     phone: "",
     countryCode: "+40",
   });
+  const [error, setError] = useState(null);
   const [passwordError, setPasswordError] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -149,18 +151,46 @@ function RegisterPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+    setPasswordError("");
+
     if (formData.password !== formData.confirmPassword) {
       setPasswordError("Parolele nu se potrivesc.");
       return;
     }
-    setPasswordError("");
-    // Aici va veni logica de trimitere a datelor către backend
-    const dataToSend = { ...formData };
-    delete dataToSend.confirmPassword; // Nu trimitem parola de confirmare
-    console.log("Registering with:", dataToSend);
-    alert("Backend is not connected yet!");
+
+    // Pregătim datele pentru a fi trimise către backend
+    const dataToSend = {
+      email: formData.email,
+      password: formData.password,
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      phone_number: `${formData.countryCode}${formData.phone.replace(/\s/g, '')}`, // Combinăm codul țării cu numărul
+      date_of_birth: formData.dob,
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/api/users/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSend),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Registration failed');
+      }
+
+      alert('Înregistrare reușită! Acum te poți autentifica.');
+      // Aici ai putea redirecționa utilizatorul către pagina de login
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.message);
+    }
   };
 
   const selectedCountry = countryOptions.find(opt => opt.code === formData.countryCode);
@@ -207,6 +237,8 @@ function RegisterPage() {
               Începe călătoria în moda locală.
             </p>
           </div>
+
+          {error && <p className="text-center text-sm text-red-600">{error}</p>}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* First and Last Name */}
