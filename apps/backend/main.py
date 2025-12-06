@@ -1,17 +1,45 @@
-from fastapi import FastAPI, HTTPException, Request, Depends
+from dotenv import load_dotenv
+import os
+import logging
+
+# --- Environment Variable Loading ---
+# Build a path to the .env file relative to this file's location (backend/.env)
+# This makes the app runnable from any directory.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(current_dir, '.env')
+load_dotenv(dotenv_path=dotenv_path)
+
+# --- Logging Configuration ---
+# This ensures that print statements and logs are visible in the uvicorn console.
+logging.basicConfig(level=logging.INFO)
+
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from .shopping_agent.graph import shopping_graph
+
+app = FastAPI(
+    title="Local Commerce API",
+    description="An API for finding clothing from local small businesses and more."
+    )
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-import time
 from datetime import timedelta
 
+# --- Database Initialization ---
 # Import your models and the engine from the correct locations
-import models, schemas, crud
-from database import get_db, engine, Base
-import security
+from . import models, schemas, crud
+from .database import get_db, engine, DATABASE_URL
 
-# Create the FastAPI app
-app = FastAPI()
+# Extract the filename from the database URL
+db_file = DATABASE_URL.split("///")[-1]
+
+# Create the database and tables only if the file doesn't exist
+if not os.path.exists(db_file):
+    print(f"Database file not found at '{db_file}'. Creating database and tables...")
+    models.Base.metadata.create_all(bind=engine)
+
+from . import security
 
 # --- Database Initialization ---
 # Create the database tables on startup
@@ -32,24 +60,40 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# --- Logging Middleware ---
-# This will run for every request and print information to the console.
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = (time.time() - start_time) * 1000
-    formatted_process_time = '{0:.2f}'.format(process_time)
-    print(f"INFO:     {request.method} {request.url.path} - Completed in {formatted_process_time}ms")
-    return response
 
-# --- API Endpoints ---
-# Your API routes go here. They should ideally be prefixed with /api
-@app.get("/")
-def get_status():
-    """Root endpoint for health check."""
-    return {"status": "ok"}
+class ShoppingRequest(BaseModel):
+    """The request model for the shopping assistant."""
+    user_query: str
+    latitude: float
+    longitude: float
 
+@app.post("/shopping-assistant")
+async def run_shopping_assistant(request: ShoppingRequest):
+    """
+    Runs the shopping assistant graph based on user query and location.
+    """
+    initial_state = {
+        "user_query": request.user_query,
+        "user_location": {"lat": request.latitude, "lng": request.longitude},
+        "messages": [("user", request.user_query)]
+    }
+
+    final_state = await shopping_graph.ainvoke(initial_state)
+    final_message = final_state["messages"][-1]
+
+    return {"response": final_message.content}
+
+if __name__ == "__main__":
+    # Extract the filename from the database URL
+    db_file = DATABASE_URL.split("///")[-1]
+
+    # Create the database and tables only if the file doesn't exist
+    if not os.path.exists(db_file):
+        print(f"Database file not found at '{db_file}'. Creating database and tables...")
+        models.Base.metadata.create_all(bind=engine)
+    
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 @app.get("/api/hello")
 def read_root():
     return {"message": "Hello from the FastAPI backend!"}
@@ -87,7 +131,7 @@ def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2Passw
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/api/users/me/", response_model=schemas.User)
-def read_users_me(current_user: models.User = Depends(security.get_current_user)):
+def read_users_me(current_user: schemas.User = Depends(security.get_current_user)):
     """
     Endpoint protejat care returnează datele utilizatorului curent.
     """

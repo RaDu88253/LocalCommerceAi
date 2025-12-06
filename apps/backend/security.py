@@ -6,8 +6,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from database import get_db
-import crud
+from .database import get_db
+from . import models, crud, schemas
 # --- Configuration ---
 # Ideal ar fi ca SECRET_KEY să fie citit dintr-o variabilă de mediu, nu hardcodat.
 # Poți genera o cheie nouă rulând în terminalul python:

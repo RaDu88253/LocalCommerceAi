@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-import models, schemas
-from security import get_password_hash, verify_password
+from . import models, schemas
+from .security import get_password_hash, verify_password
 
 def get_user_by_email(db: Session, email: str):
     """Găsește un utilizator după email."""

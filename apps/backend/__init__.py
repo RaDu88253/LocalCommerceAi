@@ -1,5 +1,2 @@
-# This file makes the 'models' directory a Python package.
-# It also serves as a central place to import all models,
-# making them discoverable by Alembic.
-from .user import User
-from .item import Item
+# This file marks the 'backend' directory as a Python package.
+# It is intentionally left empty to avoid circular imports.
