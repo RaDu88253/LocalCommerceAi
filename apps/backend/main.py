@@ -7,18 +7,11 @@ from datetime import timedelta
 
 # Import your models and the engine from the correct locations
 import models, schemas, crud
-import database, security
+from database import get_db
+import security
 
 # Create the FastAPI app
 app = FastAPI()
-
-# --- Dependency ---
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # --- CORS Middleware ---
 # This must be placed before any routes
@@ -87,3 +80,10 @@ def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2Passw
     access_token_expires = timedelta(minutes=security.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/api/users/me/", response_model=schemas.User)
+def read_users_me(current_user: models.User = Depends(security.get_current_user)):
+    """
+    Endpoint protejat care returnează datele utilizatorului curent.
+    """
+    return current_user
