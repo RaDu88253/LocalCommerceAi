@@ -1,13 +1,12 @@
 from dotenv import load_dotenv
-from fastapi import FastAPI
 
+# Load environment variables from .env file at the very start
+load_dotenv()
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from shopping_agent.graph import shopping_graph
-
-# Load environment variables from .env file at the start
-load_dotenv()
 
 app = FastAPI(
     title="Local Commerce API",
@@ -27,7 +26,8 @@ app.add_middleware(
 class ShoppingRequest(BaseModel):
     """The request model for the shopping assistant."""
     user_query: str
-    user_location: str
+    latitude: float
+    longitude: float
 
 @app.post("/shopping-assistant")
 async def run_shopping_assistant(request: ShoppingRequest):
@@ -36,7 +36,7 @@ async def run_shopping_assistant(request: ShoppingRequest):
     """
     initial_state = {
         "user_query": request.user_query,
-        "user_location": request.user_location,
+        "user_location": {"lat": request.latitude, "lng": request.longitude},
         "messages": [("user", request.user_query)]
     }
 
