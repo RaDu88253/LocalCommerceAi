@@ -2,8 +2,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 import time
 
-# Import your models to make them known to SQLAlchemy
-from . import models
+# Import your models and the engine from the correct locations
+from app import models
 from .database import engine
 
 # Create the FastAPI app

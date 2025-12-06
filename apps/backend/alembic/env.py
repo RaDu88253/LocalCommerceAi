@@ -1,11 +1,14 @@
+import sys
+from pathlib import Path
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-
-from database import Base
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from database import Base, SQLALCHEMY_DATABASE_URL
+from app.models import *
 
 
 # this is the Alembic Config object, which provides
@@ -13,6 +16,7 @@ from database import Base
 config = context.config
 
 # Interpret the config file for Python logging.
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
