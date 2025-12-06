@@ -2,7 +2,12 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 
+from database import get_db
+import crud
 # --- Configuration ---
 # Ideal ar fi ca SECRET_KEY să fie citit dintr-o variabilă de mediu, nu hardcodat.
 # Poți genera o cheie nouă rulând în terminalul python:
@@ -10,6 +15,9 @@ from jose import JWTError, jwt
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Schema OAuth2 care specifică de unde se ia token-ul (din header-ul Authorization)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 
 # Folosim argon2, standardul modern recomandat pentru hashing-ul parolelor.
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -31,3 +39,25 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """Returnează hash-ul pentru o parolă dată."""
     return pwd_context.hash(password)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """
+    Decodifică token-ul, validează utilizatorul și îl returnează.
+    Aceasta este dependența care va proteja rutele.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = crud.get_user_by_email(db, email=email)
+    if user is None:
+        raise credentials_exception
+    return user
