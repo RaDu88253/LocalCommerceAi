@@ -24,4 +24,8 @@ class User(BaseModel):
     # Această configurație permite Pydantic să citească datele
     # direct dintr-un model SQLAlchemy.
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

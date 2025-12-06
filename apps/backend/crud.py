@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 import models, schemas
-from security import get_password_hash
+from security import get_password_hash, verify_password
 
 def get_user_by_email(db: Session, email: str):
     """Găsește un utilizator după email."""
@@ -10,6 +10,17 @@ def get_user_by_email(db: Session, email: str):
 def get_user_by_username(db: Session, username: str):
     """Găsește un utilizator după username."""
     return db.query(models.User).filter(models.User.username == username).first()
+
+def authenticate_user(db: Session, username: str, password: str):
+    """
+    Autentifică un utilizator.
+    """
+    user = get_user_by_username(db, username=username)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
 
 def create_user(db: Session, user: schemas.UserCreate):
     """Creează un utilizator nou în baza de date."""

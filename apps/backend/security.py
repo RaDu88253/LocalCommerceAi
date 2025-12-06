@@ -1,7 +1,28 @@
 from passlib.context import CryptContext
+from datetime import datetime, timedelta
+from typing import Optional
+from jose import JWTError, jwt
 
-# Folosim bcrypt, care este un standard solid pentru hashing-ul parolelor
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# --- Configuration ---
+# Ideal ar fi ca SECRET_KEY să fie citit dintr-o variabilă de mediu, nu hardcodat.
+# Poți genera o cheie nouă rulând în terminalul python:
+# import secrets; secrets.token_hex(32)
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Folosim argon2, standardul modern recomandat pentru hashing-ul parolelor.
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifică dacă parola în clar corespunde cu hash-ul stocat."""
