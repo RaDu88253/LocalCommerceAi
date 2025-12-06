@@ -43,7 +43,12 @@ function LoginPage() {
 
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message);
+      // Asigurăm că afișăm un mesaj text, chiar dacă eroarea este un obiect.
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('A apărut o eroare neașteptată. Vă rugăm să încercați din nou.');
+      }
     }
   };
 

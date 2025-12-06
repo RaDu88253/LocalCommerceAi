@@ -199,7 +199,12 @@ function RegisterPage() {
       // Aici ai putea redirecționa utilizatorul către pagina de login
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.message);
+      // Asigurăm că afișăm un mesaj text, chiar dacă eroarea este un obiect.
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('A apărut o eroare neașteptată. Vă rugăm să încercați din nou.');
+      }
     }
   };
 
