@@ -151,11 +151,22 @@ function RegisterPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Regex pentru validarea parolei
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
     if (formData.password !== formData.confirmPassword) {
       setPasswordError("Parolele nu se potrivesc.");
       return;
     }
-    setPasswordError("");
+
+    if (!passwordRegex.test(formData.password)) {
+      setPasswordError("Parola trebuie să aibă minim 8 caractere, o majusculă, o cifră și un caracter special.");
+      return;
+    }
+
+    setPasswordError(""); // Curăță eroarea dacă totul este în regulă
+
     // Aici va veni logica de trimitere a datelor către backend
     const dataToSend = { ...formData };
     delete dataToSend.confirmPassword; // Nu trimitem parola de confirmare
@@ -164,6 +175,9 @@ function RegisterPage() {
   };
 
   const selectedCountry = countryOptions.find(opt => opt.code === formData.countryCode);
+
+  // Obține data curentă în format YYYY-MM-DD pentru a limita câmpul de dată
+  const maxDate = new Date().toISOString().split("T")[0];
 
   return (
     <div className="min-h-screen flex font-sans">
@@ -236,7 +250,7 @@ function RegisterPage() {
                   Data nașterii
                 </label>
                 <div className="mt-1">
-                  <input id="dob" name="dob" type="date" required value={formData.dob} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-[#752699] focus:border-[#752699]" />
+                  <input id="dob" name="dob" type="date" max={maxDate} required value={formData.dob} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-[#752699] focus:border-[#752699]" />
                 </div>
               </div>
               <div className="w-full sm:w-1/2 mt-4 sm:mt-0">
