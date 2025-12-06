@@ -1,5 +1,5 @@
 {
-  "name": "your-repository-name",
+  "name": "LocalCommerceAi",
   "private": true,
   "workspaces": [
     "apps/frontend"
