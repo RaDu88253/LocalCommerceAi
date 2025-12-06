@@ -1,13 +1,22 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 import time
 
 # Import your models and the engine from the correct locations
-from app import models
-from .database import engine
+import models, schemas, crud
+import database
 
 # Create the FastAPI app
 app = FastAPI()
+
+# --- Dependency ---
+def get_db():
+    db = database.SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # --- CORS Middleware ---
 # This must be placed before any routes
@@ -45,3 +54,18 @@ def get_status():
 @app.get("/api/hello")
 def read_root():
     return {"message": "Hello from the FastAPI backend!"}
+
+@app.post("/api/users/", response_model=schemas.User)
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """
+    Creează un utilizator nou.
+    """
+    db_user_by_email = crud.get_user_by_email(db, email=user.email)
+    if db_user_by_email:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    db_user_by_username = crud.get_user_by_username(db, username=user.username)
+    if db_user_by_username:
+        raise HTTPException(status_code=400, detail="Username already taken")
+        
+    return crud.create_user(db=db, user=user)
