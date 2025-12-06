@@ -6,6 +6,7 @@ import Header from './Header';
 import MainPage from './MainPage';
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
+import ProtectedRoute from './ProtectedRoute';
 
 // Layout-ul principal care include header-ul
 const MainLayout = ({ children }) => (
@@ -22,8 +23,15 @@ function App() {
   const location = useLocation();
   return (
     <Routes>
-      {/* Pagina de chat are propriul ei layout complet */}
-      <Route path="/" element={<MainLayout><MainPage /></MainLayout>} />
+      {/* Pagina principală este acum protejată */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <MainLayout><MainPage /></MainLayout>
+          </ProtectedRoute>
+        }
+      />
       
       {/* Paginile de login și register folosesc un layout cu Header */}
       <Route path="/login" element={<MainLayout><LoginPage /></MainLayout>} />

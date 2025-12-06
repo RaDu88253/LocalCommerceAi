@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API_URL from './config'; // Importăm URL-ul backend-ului
 
 // --- Flag Components ---
@@ -100,6 +100,7 @@ function RegisterPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate(); // Inițializăm hook-ul de navigare
 
   // Handle closing the dropdown when clicking outside
   useEffect(() => {
@@ -195,8 +196,8 @@ function RegisterPage() {
         throw new Error(errorData.detail || 'Registration failed');
       }
 
-      alert('Înregistrare reușită! Acum te poți autentifica.');
-      // Aici ai putea redirecționa utilizatorul către pagina de login
+      // Redirecționăm utilizatorul către pagina de login după înregistrare
+      navigate('/login');
     } catch (err) {
       console.error('Registration error:', err);
       // Asigurăm că afișăm un mesaj text, chiar dacă eroarea este un obiect.

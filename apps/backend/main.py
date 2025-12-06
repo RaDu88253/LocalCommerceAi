@@ -10,11 +10,6 @@ import models, schemas, crud
 from database import get_db, engine, Base
 import security
 
-# --- Database Table Creation ---
-# This will create the database tables based on your SQLAlchemy models
-# if they don't exist already.
-Base.metadata.create_all(bind=engine)
-
 # Create the FastAPI app
 app = FastAPI()
 
@@ -63,6 +58,11 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user_by_email = crud.get_user_by_email(db, email=user.email)
     if db_user_by_email:
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Add a check for the phone number
+    db_user_by_phone = db.query(models.User).filter(models.User.phone_number == user.phone_number).first()
+    if db_user_by_phone:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
 
     return crud.create_user(db=db, user=user)
 

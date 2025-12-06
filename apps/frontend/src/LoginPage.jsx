@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API_URL from './config'; // Importăm URL-ul backend-ului
 
 function LoginPage() {
@@ -7,6 +7,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // Inițializăm hook-ul de navigare
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,8 +39,8 @@ function LoginPage() {
       // Salvăm token-ul în localStorage pentru a-l folosi ulterior
       localStorage.setItem('accessToken', data.access_token);
       
-      alert('Login reușit! Token-ul a fost salvat.');
-      // Aici ai putea redirecționa utilizatorul, de ex. cu useNavigate()
+      // Redirecționăm utilizatorul către pagina principală
+      navigate('/');
 
     } catch (err) {
       console.error('Login error:', err);
