@@ -1,7 +1,9 @@
 fastapi
 uvicorn[standard]
-sqlalchemy
-alembic
 python-dotenv
-psycopg2-binary
-mysqlclient
+langgraph
+langchain
+langchain-openai
+tavily-python
+psycopg2-binary # Assuming a PostgreSQL database for alembic
+

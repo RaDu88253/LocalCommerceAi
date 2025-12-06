@@ -1,47 +1,50 @@
-from fastapi import FastAPI, HTTPException, Request
+from dotenv import load_dotenv
+from fastapi import FastAPI
+
 from fastapi.middleware.cors import CORSMiddleware
-import time
+from pydantic import BaseModel
 
-# Import your models to make them known to SQLAlchemy
-from . import models
-from .database import engine
+from shopping_agent.graph import shopping_graph
 
-# Create the FastAPI app
-app = FastAPI()
+# Load environment variables from .env file at the start
+load_dotenv()
 
-# --- CORS Middleware ---
-# This must be placed before any routes
-
-origins = [
-    "*"  # Allow all origins
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
+app = FastAPI(
+    title="Local Commerce API",
+    description="An API for finding clothing from local small businesses and more."
 )
 
-# --- Logging Middleware ---
-# This will run for every request and print information to the console.
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = (time.time() - start_time) * 1000
-    formatted_process_time = '{0:.2f}'.format(process_time)
-    print(f"INFO:     {request.method} {request.url.path} - Completed in {formatted_process_time}ms")
-    return response
+# Add CORS middleware for hackathon-friendly development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
-# --- API Endpoints ---
-# Your API routes go here. They should ideally be prefixed with /api
-@app.get("/")
-def get_status():
-    """Root endpoint for health check."""
-    return {"status": "ok"}
 
-@app.get("/api/hello")
-def read_root():
-    return {"message": "Hello from the FastAPI backend!"}
+class ShoppingRequest(BaseModel):
+    """The request model for the shopping assistant."""
+    user_query: str
+    user_location: str
+
+@app.post("/shopping-assistant")
+async def run_shopping_assistant(request: ShoppingRequest):
+    """
+    Runs the shopping assistant graph based on user query and location.
+    """
+    initial_state = {
+        "user_query": request.user_query,
+        "user_location": request.user_location,
+        "messages": [("user", request.user_query)]
+    }
+
+    final_state = await shopping_graph.ainvoke(initial_state)
+    final_message = final_state["messages"][-1]
+
+    return {"response": final_message.content}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
