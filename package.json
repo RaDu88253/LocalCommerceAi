@@ -1,5 +1,5 @@
 {
-  "name": "LocalCommerceAi",
+  "name": "local-commerce-ai",
   "private": true,
   "workspaces": [
     "apps/frontend"
