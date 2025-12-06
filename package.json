@@ -1,0 +1,14 @@
+{
+  "name": "your-repository-name",
+  "private": true,
+  "workspaces": [
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend:unix": "cd apps && ./backend/venv/bin/python -m uvicorn backend.main:app --reload",
+    "dev:backend:win": "cd apps && .\\backend\\venv\\Scripts\\python.exe -m uvicorn backend.main:app --reload",
+    "install-frontend": "npm install --workspace=frontend",
+    "build": "npm run build --workspace=frontend"
+  }
+}
