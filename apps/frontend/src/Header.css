@@ -1,0 +1,43 @@
+.app-header {
+    /* Transparent background */
+    background-color: transparent;
+    padding: 1rem 2rem;
+    /* Remove shadow */
+    box-shadow: none;
+    display: flex;
+    /* Logo on left, links on right */
+    justify-content: space-between;
+    align-items: center;
+    /* Absolute positioning */
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 10;
+}
+
+/* Style for the logo link */
+.logo-link {
+    text-decoration: none;
+    color: #752699;
+    font-weight: bold;
+    font-size: 2.25rem; /* Increased size */
+}
+
+.header-nav {
+    display: flex;
+    /* Creates space between the links */
+    gap: 2rem;
+}
+
+.header-nav a {
+    color: #343a40;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 0.5rem;
+    transition: color 0.2s ease-in-out;
+}
+
+.header-nav a:hover {
+    color: #752699; 
+}

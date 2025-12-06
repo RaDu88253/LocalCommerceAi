@@ -1,35 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import Header from './Header';
+
+// Import the new pages
+import MainPage from './MainPage';
+import LoginPage from './LoginPage';
+import RegisterPage from './RegisterPage';
+import ProtectedRoute from './ProtectedRoute';
+
+// Layout-ul principal care include header-ul
+const MainLayout = ({ children }) => (
+  <>
+    <Header />
+    <main>{children}</main>
+  </>
+);
+
+// Un layout simplu pentru paginile care nu au nevoie de elemente comune (cum e chat-ul)
+const SimpleLayout = ({ children }) => <>{children}</>;
 
 function App() {
-  const [count, setCount] = useState(0)
-
+  const location = useLocation();
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Routes>
+      {/* Pagina principală este acum protejată */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <MainLayout><MainPage /></MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* Paginile de login și register folosesc un layout cu Header */}
+      <Route path="/login" element={<MainLayout><LoginPage /></MainLayout>} />
+      <Route path="/register" element={<MainLayout><RegisterPage /></MainLayout>} />
+    </Routes>
+  );
 }
 
 export default App
