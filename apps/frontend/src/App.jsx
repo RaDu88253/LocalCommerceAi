@@ -1,52 +1,35 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './Header.jsx';
-import './App.css'
-import API_URL from './config';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import Header from './Header';
 
 // Import the new pages
-import MainPage from './MainPage.jsx';
-import LoginPage from './LoginPage.jsx';
-import RegisterPage from './RegisterPage.jsx';
+import MainPage from './MainPage';
+import LoginPage from './LoginPage';
+import RegisterPage from './RegisterPage';
+
+// Layout-ul principal care include header-ul
+const MainLayout = ({ children }) => (
+  <>
+    <Header />
+    <main>{children}</main>
+  </>
+);
+
+// Un layout simplu pentru paginile care nu au nevoie de elemente comune (cum e chat-ul)
+const SimpleLayout = ({ children }) => <>{children}</>;
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState('Connecting...');
-
-  useEffect(() => {
-    // Funcție pentru a verifica starea backend-ului
-    const checkBackendStatus = async () => {
-      try {
-        const response = await fetch(`${API_URL}/`);
-        if (response.ok) {
-          const data = await response.json();
-          setBackendStatus(`Connected! Status: ${data.status}`);
-        } else {
-          setBackendStatus('Backend is not connected yet!');
-        }
-      } catch (error) {
-        console.error("Connection error:", error);
-        setBackendStatus('Failed to connect to backend. Is it running?');
-      }
-    };
-
-    checkBackendStatus();
-  }, []); // [] asigură că acest efect se rulează o singură dată, la montarea componentei
-
+  const location = useLocation();
   return (
-    <Router>
-      <div className="App">
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<MainPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Routes>
-        </main>
-        <h2>{backendStatus}</h2>
-      </div>
-    </Router>
-  )
+    <Routes>
+      {/* Pagina de chat are propriul ei layout complet */}
+      <Route path="/" element={<MainLayout><MainPage /></MainLayout>} />
+      
+      {/* Paginile de login și register folosesc un layout cu Header */}
+      <Route path="/login" element={<MainLayout><LoginPage /></MainLayout>} />
+      <Route path="/register" element={<MainLayout><RegisterPage /></MainLayout>} />
+    </Routes>
+  );
 }
 
 export default App
