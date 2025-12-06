@@ -13,6 +13,10 @@ import security
 # Create the FastAPI app
 app = FastAPI()
 
+# --- Database Initialization ---
+# Create the database tables on startup
+Base.metadata.create_all(bind=engine)
+
 # --- CORS Middleware ---
 # This must be placed before any routes
 
