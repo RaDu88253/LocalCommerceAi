@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Am curățat importul duplicat
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './Header.css';
 
 function Header() {
     const navigate = useNavigate();
+    const location = useLocation();
     const token = localStorage.getItem('accessToken');
 
     const handleLogout = () => {
@@ -13,10 +14,17 @@ function Header() {
         navigate('/login');
     };
 
+    // Logo-ul este un link doar dacă utilizatorul este logat ȘI nu se află pe pagina principală.
+    const isLogoActiveLink = token && location.pathname !== '/';
+
     return (
         <header className="app-header">
             {/* Logo on the left */}
-            <Link to={token ? "/" : "/login"} className="logo-link">find.</Link>
+            {isLogoActiveLink ? (
+                <Link to="/" className="logo-link">find.</Link>
+            ) : (
+                <span className="logo-link">find.</span>
+            )}
 
             {/* Navigation links on the right */}
             <nav className="header-nav">
