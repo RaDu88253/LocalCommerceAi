@@ -17,6 +17,11 @@ SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 if not SQLALCHEMY_DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable not set. Please create a .env file with the variable.")
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# For SQLite, we need to add a special argument to allow it to be used across multiple threads,
+# which is how FastAPI works.
+connect_args = {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
