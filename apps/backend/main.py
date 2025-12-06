@@ -7,8 +7,13 @@ from datetime import timedelta
 
 # Import your models and the engine from the correct locations
 import models, schemas, crud
-from database import get_db
+from database import get_db, engine, Base
 import security
+
+# --- Database Table Creation ---
+# This will create the database tables based on your SQLAlchemy models
+# if they don't exist already.
+Base.metadata.create_all(bind=engine)
 
 # Create the FastAPI app
 app = FastAPI()
