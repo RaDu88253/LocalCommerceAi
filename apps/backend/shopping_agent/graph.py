@@ -1,5 +1,8 @@
+
+
 import json
 from typing import List, TypedDict, Annotated
+import os
 
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -34,7 +37,7 @@ class AgentState(TypedDict):
 # --- Agent Nodes ---
 
 # Use a free, local model for query parsing.
-llm = ChatOpenAI(model="gpt-4.1-nano")
+llm = ChatOpenAI(model="gpt-4.1-nano", api_key=os.environ.get("OPENAI_API_KEY"))
 
 class ExtractedProductInfo(BaseModel):
     """Represents product info extracted from a webpage."""

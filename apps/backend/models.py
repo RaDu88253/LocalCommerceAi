@@ -1,7 +1,6 @@
-import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Date
+from sqlalchemy import Column, Integer, String, DateTime, Date, func
 
-from database import Base
+from .database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -13,7 +12,7 @@ class User(Base):
     last_name = Column(String, nullable=False)
     phone_number = Column(String, unique=True, index=True, nullable=False)
     date_of_birth = Column(Date, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
         return f"<User(email='{self.email}')>"

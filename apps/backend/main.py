@@ -1,31 +1,45 @@
 from dotenv import load_dotenv
+import os
+import logging
 
-# Load environment variables from .env file at the very start
-load_dotenv()
+# --- Environment Variable Loading ---
+# Build a path to the .env file relative to this file's location (backend/.env)
+# This makes the app runnable from any directory.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(current_dir, '.env')
+load_dotenv(dotenv_path=dotenv_path)
 
-from fastapi import FastAPI
+# --- Logging Configuration ---
+# This ensures that print statements and logs are visible in the uvicorn console.
+logging.basicConfig(level=logging.INFO)
+
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from shopping_agent.graph import shopping_graph
+from .shopping_agent.graph import shopping_graph
 
 app = FastAPI(
     title="Local Commerce API",
     description="An API for finding clothing from local small businesses and more."
     )
-from fastapi import FastAPI, HTTPException, Request, Depends
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-import time
 from datetime import timedelta
 
+# --- Database Initialization ---
 # Import your models and the engine from the correct locations
-import models, schemas, crud
-from database import get_db, engine, Base
-import security
+from . import models, schemas, crud
+from .database import get_db, engine, DATABASE_URL
 
-# Create the FastAPI app
-app = FastAPI()
+# Extract the filename from the database URL
+db_file = DATABASE_URL.split("///")[-1]
+
+# Create the database and tables only if the file doesn't exist
+if not os.path.exists(db_file):
+    print(f"Database file not found at '{db_file}'. Creating database and tables...")
+    models.Base.metadata.create_all(bind=engine)
+
+from . import security
 
 # --- CORS Middleware ---
 # This must be placed before any routes
@@ -40,15 +54,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],  # Allow all headers
-)
-
-# Add CORS middleware for hackathon-friendly development
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
 )
 
 
@@ -75,6 +80,14 @@ async def run_shopping_assistant(request: ShoppingRequest):
     return {"response": final_message.content}
 
 if __name__ == "__main__":
+    # Extract the filename from the database URL
+    db_file = DATABASE_URL.split("///")[-1]
+
+    # Create the database and tables only if the file doesn't exist
+    if not os.path.exists(db_file):
+        print(f"Database file not found at '{db_file}'. Creating database and tables...")
+        models.Base.metadata.create_all(bind=engine)
+    
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 @app.get("/api/hello")
@@ -114,7 +127,7 @@ def login_for_access_token(db: Session = Depends(get_db), form_data: OAuth2Passw
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/api/users/me/", response_model=schemas.User)
-def read_users_me(current_user: models.User = Depends(security.get_current_user)):
+def read_users_me(current_user: schemas.User = Depends(security.get_current_user)):
     """
     Endpoint protejat care returnează datele utilizatorului curent.
     """
