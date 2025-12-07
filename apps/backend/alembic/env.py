@@ -10,8 +10,8 @@ from alembic import context
 # Add the parent directory of 'backend' to the Python path
 # This ensures that 'backend' is treated as a package.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from database import Base, DATABASE_URL
-import models
+from backend.database import Base, DATABASE_URL
+from backend import models
 
 
 # this is the Alembic Config object, which provides
