@@ -2,13 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import './MainPage.css';
 import API_URL from './config'; // Import the API URL
 
-// Plus Icon SVG
-const PlusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-);
-
 // --- Iconiță pentru cardul de prezentare ---
 const StorefrontIcon = () => (
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -121,11 +114,6 @@ function MainPage() {
 
     return (
         <div className="main-page-container">
-            {/* New Conversation Button - positioned absolutely */}
-            <button onClick={handleNewConversation} className="new-convo-button">
-                <PlusIcon />
-                <span>Conversație nouă</span>
-            </button>
             <div className="chat-window">
                 {/* Welcome screen, which will fade out */}
                 {!isChatActive && (

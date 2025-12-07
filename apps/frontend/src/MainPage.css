@@ -307,35 +307,43 @@
     to { opacity: 0; }
 }
 
-/* Style for the "New Conversation" button, moved from Header.css */
-.new-convo-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background-color: rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(117, 38, 153, 0.2);
-    padding: 0.6rem 1.2rem;
-    border-radius: 9999px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #752699;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    /* Positioning */
-    position: absolute;
-    top: 5.5rem; /* Positioned below the header/logo */
-    left: 2rem;
-    z-index: 20; /* Ensure it's above chat window but below header if needed */
-}
+/* --- Responsive Design for Mobile --- */
+@media (max-width: 768px) {
+    .chat-window {
+        padding: 1rem;
+        -webkit-mask-image: linear-gradient(transparent, black 100px);
+        mask-image: linear-gradient(transparent, black 100px);
+    }
 
-.new-convo-button:hover {
-    background-color: white;
-    box-shadow: 0 4px 14px rgba(117, 38, 153, 0.25); /* Umbră mai pronunțată și colorată */
-    transform: translateY(-3px) scale(1.05); /* Efectul "poppy" de ridicare și mărire */
-}
+    .message-bubble {
+        padding: 0.8rem 1.2rem;
+        border-radius: 1.2rem;
+    }
 
-/* Adăugăm un efect vizual și la click */
-.new-convo-button:active {
-    transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 2px 8px rgba(117, 38, 153, 0.2);
+    .welcome-container {
+        padding-bottom: 5vh;
+    }
+
+    .welcome-logo {
+        font-size: 3rem;
+    }
+
+    .welcome-title {
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .suggestion-chips {
+        gap: 0.75rem;
+    }
+
+    .chip {
+        padding: 0.6rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    .single-feature-box {
+        margin-top: 2.5rem;
+        padding: 1.5rem;
+    }
 }
