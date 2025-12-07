@@ -14,6 +14,7 @@ class ShoppingAgentState(TypedDict):
     search_keywords: str  # Keywords extracted for searching
     main_product: str # The main product category, e.g., "jacket"
     businesses: List[Business]
+    is_clothing_query: bool # To store the classification result
     
 
 # --- LLM Configuration ---
@@ -21,10 +22,27 @@ class ShoppingAgentState(TypedDict):
 llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 # --- Agent Nodes ---
+def query_classifier_node(state: ShoppingAgentState):
+    """
+    Classifies if the user query is about buying clothing.
+    """
+    user_query = state["user_query"]
+    
+    classification_prompt = f"""
+    Does the following user query explicitly state an intention to search for or buy a clothing item?
+    Answer with only "yes" or "no".
+
+    User query: "{user_query}"
+    """
+    
+    response = llm.invoke([SystemMessage(content=classification_prompt)])
+    answer = response.content.strip().lower()
+    
+    return {"is_clothing_query": "yes" in answer}
+
 def query_extractor_node(state: ShoppingAgentState):
     """
     Extracts relevant search keywords from the user's query using an LLM.
-    Example: "Vreau să cumpăr o jachetă neagră de piele" -> "jachetă neagră de piele".
     """
     user_query = state["user_query"]
     
@@ -127,20 +145,46 @@ Here is the list of businesses and their details:
     response = llm.invoke([SystemMessage(content=final_prompt)] + state["messages"])
     return {"messages": [response]}
 
+def predefined_response_node(state: ShoppingAgentState):
+    """
+    Generates a predefined response for queries not related to clothing.
+    """
+    predefined_message = "Îmi pare rău, sunt un asistent specializat și pot oferi ajutor doar pentru căutarea de articole de îmbrăcăminte."
+    return {"messages": [SystemMessage(content=predefined_message)]}
+
+# --- Conditional Edge Logic ---
+def should_continue(state: ShoppingAgentState) -> str:
+    """Determines which path to take based on query classification."""
+    if state.get("is_clothing_query"):
+        return "continue_to_extraction"
+    else:
+        return "end_with_predefined_response"
+
 # --- Graph Definition ---
 builder = StateGraph(ShoppingAgentState)
 
 # Define the nodes
+builder.add_node("classify_query", query_classifier_node)
 builder.add_node("extract_keywords", query_extractor_node)
 builder.add_node("find_businesses", business_finder_node)
 builder.add_node("search_for_product", product_search_node)
 builder.add_node("synthesize_response", response_synthesizer_node)
+builder.add_node("predefined_response", predefined_response_node)
 
 # Define the edges
-builder.set_entry_point("extract_keywords")
+builder.set_entry_point("classify_query")
+builder.add_conditional_edges(
+    "classify_query",
+    should_continue,
+    {
+        "continue_to_extraction": "extract_keywords",
+        "end_with_predefined_response": "predefined_response",
+    },
+)
 builder.add_edge("extract_keywords", "find_businesses")
 builder.add_edge("find_businesses", "search_for_product")
 builder.add_edge("search_for_product", "synthesize_response")
 builder.add_edge("synthesize_response", END)
+builder.add_edge("predefined_response", END)
 
 shopping_graph = builder.compile()
