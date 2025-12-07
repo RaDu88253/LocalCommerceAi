@@ -12,11 +12,14 @@ load_dotenv(dotenv_path=dotenv_path)
 # --- Logging Configuration ---
 # This ensures that print statements and logs are visible in the uvicorn console.
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from .shopping_agent.graph import shopping_graph
+from twilio.rest import Client as TwilioClient
+
 
 app = FastAPI(
     title="Local Commerce API",
@@ -83,17 +86,59 @@ async def run_shopping_assistant(request: ShoppingRequest):
 
     return {"response_lines": response_lines}
 
-if __name__ == "__main__":
-    # Extract the filename from the database URL
-    db_file = DATABASE_URL.split("///")[-1]
+async def process_whatsapp_message(user_query: str, from_number: str):
+    """
+    This function contains the agent logic and will be run in the background.
+    """
+    logger.info(f"Processing background task for {from_number} with query: '{user_query}'")
+    # --- Twilio Configuration ---
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    twilio_phone_number = os.getenv("TWILIO_PHONE_NUMBER")
 
-    # Create the database and tables only if the file doesn't exist
-    if not os.path.exists(db_file):
-        print(f"Database file not found at '{db_file}'. Creating database and tables...")
-        models.Base.metadata.create_all(bind=engine)
-    
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    if not all([account_sid, auth_token, twilio_phone_number]):
+        logger.error("Twilio credentials are not configured in .env file.")
+        return # Stop execution if Twilio is not configured
+
+    # Since we can't get GPS from WhatsApp, we use a default location.
+    default_location = {
+        "lat": 44.4268,  # Bucharest latitude
+        "lng": 26.1025,  # Bucharest longitude
+    }
+
+    initial_state = {
+        "user_query": user_query,
+        "user_location": default_location,
+        "messages": [("user", user_query)]
+    }
+
+    try:
+        # Run the shopping agent graph
+        final_state = await shopping_graph.ainvoke(initial_state)
+        final_message = final_state["messages"][-1]
+        response_text = final_message.content
+
+        # Send the reply via Twilio
+        client = TwilioClient(account_sid, auth_token)
+        client.messages.create(
+            from_=f'whatsapp:{twilio_phone_number}',
+            body=response_text,
+            to=from_number
+        )
+        logger.info(f"Successfully sent reply to {from_number}")
+    except Exception as e:
+        logger.error(f"Error processing agent or sending Twilio message for {from_number}: {e}")
+
+@app.post("/whatsapp-webhook")
+async def whatsapp_webhook(background_tasks: BackgroundTasks, Body: str = Form(...), From: str = Form(...)):
+    """
+    Handles incoming WhatsApp messages via Twilio webhook.
+    It immediately responds to Twilio and processes the message in the background.
+    """
+    background_tasks.add_task(process_whatsapp_message, Body, From)
+
+    return {} # Return an empty response immediately
+
 @app.get("/api/hello")
 def read_root():
     return {"message": "Hello from the FastAPI backend!"}
@@ -141,3 +186,7 @@ def read_users_me(current_user: schemas.User = Depends(security.get_current_user
     Endpoint protejat care returnează datele utilizatorului curent.
     """
     return current_user
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
