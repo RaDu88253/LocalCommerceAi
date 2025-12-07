@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from datetime import timedelta
 import os
 import logging
 
@@ -13,25 +14,23 @@ load_dotenv(dotenv_path=dotenv_path)
 # This ensures that print statements and logs are visible in the uvicorn console.
 logging.basicConfig(level=logging.INFO)
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from .shopping_agent.graph import shopping_graph
+from sqlalchemy.orm import Session
 
+# --- Local Imports ---
+from .shopping_agent.graph import shopping_graph
+from . import models, schemas, crud
+from .database import get_db, engine, DATABASE_URL
+from . import security
+
+# --- FastAPI App Initialization ---
 app = FastAPI(
     title="Local Commerce API",
     description="An API for finding clothing from local small businesses and more."
-    )
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from datetime import timedelta
-
-# --- Database Initialization ---
-# Import your models and the engine from the correct locations
-from . import models, schemas, crud
-from .database import get_db, engine, DATABASE_URL
-
-from . import security
+)
 
 # --- CORS Middleware ---
 # This must be placed before any routes
@@ -47,6 +46,15 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],  # Allow all headers
 )
+
+# --- Middleware for Logging ---
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """A simple middleware to log incoming requests."""
+    logging.info(f"Request: {request.method} {request.url}")
+    response = await call_next(request)
+    logging.info(f"Response status: {response.status_code}")
+    return response
 
 
 class ShoppingRequest(BaseModel):
