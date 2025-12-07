@@ -91,9 +91,11 @@ function MainPage() {
 
                 const responseData = await response.json();
 
-                // 4. Replace "typing..." with the actual response
+                // 4. Replace "typing..." with the actual response, which is now an array of lines.
+                // We store the array directly in the message object.
                 setMessages(prev => prev.map(msg => 
-                    msg.id === typingMessageId ? { ...msg, text: responseData.response, typing: false } : msg
+                    msg.id === typingMessageId ? 
+                    { ...msg, text: responseData.response_lines, typing: false } : msg
                 ));
 
             } catch (error) {
@@ -154,7 +156,16 @@ function MainPage() {
                                 <div className="message-bubble">
                                     {message.typing ? (
                                         <div className="typing-indicator"><span></span><span></span><span></span></div>
+                                    ) : Array.isArray(message.text) ? (
+                                        // If message.text is an array, map over it to render each line.
+                                        // We use React.Fragment to group the elements without adding extra nodes to the DOM.
+                                        message.text.map((line, index) => (
+                                            <React.Fragment key={index}>
+                                                {line}{index < message.text.length - 1 && <><br /></>}
+                                            </React.Fragment>
+                                        ))
                                     ) : (
+                                        // Otherwise, render it as a plain string. This maintains compatibility.
                                         message.text
                                     )}
                                 </div>
