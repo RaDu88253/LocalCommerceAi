@@ -12,7 +12,7 @@ class User(Base):
     last_name = Column(String, nullable=False)
     phone_number = Column(String, unique=True, index=True, nullable=False)
     date_of_birth = Column(Date, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     def __repr__(self):
         return f"<User(email='{self.email}')>"
