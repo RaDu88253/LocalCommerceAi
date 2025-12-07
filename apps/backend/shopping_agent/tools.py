@@ -17,6 +17,7 @@ class Business(TypedDict):
     address: str
     rating: float
     maps_url: str
+    place_id: str
     website: Optional[str]
     product_url: Optional[str]
     score: int
@@ -67,12 +68,14 @@ def find_local_businesses(state: Dict) -> Dict:
     """
     user_query = state.get("user_query")
     user_location = state.get("user_location")
-    logger.info(f"Tool 'find_local_businesses' running for query: '{user_query}'")
+    search_radius = state.get("search_radius", 5000) # Default to 5km
+    logger.info(f"Tool 'find_local_businesses' running for query: '{user_query}' with radius: {search_radius}m")
 
     if not user_location:
         return {"businesses": [], "error": "User location is missing."}
 
     try:
+        # This block was moved to the graph's initialization logic
         # Gracefully handle missing API keys instead of crashing the server.
         gmaps = get_gmaps_client()
         get_tavily_client() # We call this just to validate the key is present.
@@ -83,7 +86,7 @@ def find_local_businesses(state: Dict) -> Dict:
         places_result = gmaps.places_nearby(
             location=user_location,
             keyword=user_query,
-            radius=5000,  # Search within a 5km radius
+            radius=search_radius,
             language="ro",
             type="clothing_store"
         )
@@ -114,6 +117,7 @@ def find_local_businesses(state: Dict) -> Dict:
                 "address": place.get("vicinity"),
                 "rating": place.get("rating", 0),
                 "maps_url": f"https://www.google.com/maps/place/?q=place_id:{place.get('place_id')}",
+                "place_id": place.get('place_id'),
                 "website": website,
                 "score": score,
             })
