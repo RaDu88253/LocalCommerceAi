@@ -1,2 +1,2 @@
 # This file marks the 'backend' directory as a Python package.
-# It is intentionally left empty to avoid circular imports.
+# It is intentionally left empty to avoid import conflicts.

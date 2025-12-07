@@ -41,10 +41,6 @@ if not os.path.exists(db_file):
 
 from . import security
 
-# --- Database Initialization ---
-# Create the database tables on startup
-Base.metadata.create_all(bind=engine)
-
 # --- CORS Middleware ---
 # This must be placed before any routes
 
@@ -97,6 +93,11 @@ if __name__ == "__main__":
 @app.get("/api/hello")
 def read_root():
     return {"message": "Hello from the FastAPI backend!"}
+
+@app.get("/api/status")
+def read_root():
+    """A simple endpoint to check if the API is running."""
+    return {"status": "ok"}
 
 @app.post("/api/users/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
