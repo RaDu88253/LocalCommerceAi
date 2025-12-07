@@ -6,7 +6,10 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+# Add the parent directory of 'backend' to the Python path
+# This ensures that 'backend' is treated as a package.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from database import Base, DATABASE_URL
 import models
 
