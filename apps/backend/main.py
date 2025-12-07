@@ -31,14 +31,6 @@ from datetime import timedelta
 from . import models, schemas, crud
 from .database import get_db, engine, DATABASE_URL
 
-# Extract the filename from the database URL
-db_file = DATABASE_URL.split("///")[-1]
-
-# Create the database and tables only if the file doesn't exist
-if not os.path.exists(db_file):
-    print(f"Database file not found at '{db_file}'. Creating database and tables...")
-    models.Base.metadata.create_all(bind=engine)
-
 from . import security
 
 # --- CORS Middleware ---
@@ -79,17 +71,6 @@ async def run_shopping_assistant(request: ShoppingRequest):
 
     return {"response": final_message.content}
 
-if __name__ == "__main__":
-    # Extract the filename from the database URL
-    db_file = DATABASE_URL.split("///")[-1]
-
-    # Create the database and tables only if the file doesn't exist
-    if not os.path.exists(db_file):
-        print(f"Database file not found at '{db_file}'. Creating database and tables...")
-        models.Base.metadata.create_all(bind=engine)
-    
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 @app.get("/api/hello")
 def read_root():
     return {"message": "Hello from the FastAPI backend!"}

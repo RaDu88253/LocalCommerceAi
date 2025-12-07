@@ -2,6 +2,7 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
+import os
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
@@ -10,10 +11,9 @@ from .database import get_db
 from . import models, crud, schemas
 # --- Configuration ---
 # Ideal ar fi ca SECRET_KEY să fie citit dintr-o variabilă de mediu, nu hardcodat.
-# Poți genera o cheie nouă rulând în terminalul python:
-# import secrets; secrets.token_hex(32)
-SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
-ALGORITHM = "HS256"
+# Cheia este citită din variabilele de mediu. Pe Render o vom seta în dashboard.
+SECRET_KEY = os.getenv("SECRET_KEY", "a_default_secret_key_for_local_dev")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Schema OAuth2 care specifică de unde se ia token-ul (din header-ul Authorization)

@@ -20,7 +20,7 @@ function Header() {
     return (
         <header className="app-header">
             {/* Logo on the left */}
-            {isLogoActiveLink ? (
+            {token ? (
                 <Link to="/" className="logo-link">find.</Link>
             ) : (
                 <span className="logo-link">find.</span>
