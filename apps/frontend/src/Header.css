@@ -41,3 +41,8 @@
 .header-nav a:hover {
     color: #752699; 
 }
+
+/* Stilul pentru link-ul activ */
+.header-nav a.active {
+    color: #752699;
+}

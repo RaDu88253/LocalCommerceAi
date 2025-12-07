@@ -6,6 +6,7 @@ import Header from './Header';
 import MainPage from './MainPage';
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
+import ProfilePage from './ProfilePage'; // Import the new ProfilePage
 import ProtectedRoute from './ProtectedRoute';
 
 // Layout-ul principal care include header-ul
@@ -36,6 +37,16 @@ function App() {
       {/* Paginile de login și register folosesc un layout cu Header */}
       <Route path="/login" element={<MainLayout><LoginPage /></MainLayout>} />
       <Route path="/register" element={<MainLayout><RegisterPage /></MainLayout>} />
+
+      {/* Adăugăm ruta pentru pagina de profil */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <MainLayout><ProfilePage /></MainLayout>
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
