@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './Header.css';
 
 function Header() {
@@ -30,14 +30,16 @@ function Header() {
             <nav className="header-nav">
                 {token ? (
                     <>
-                        {/* Buton pentru utilizatorul autentificat */}
+                        {/* Link-uri pentru utilizatorul autentificat */}
+                        <NavLink to="/" className={({ isActive }) => (isActive ? 'active' : '')}>Chat with find</NavLink>
+                        <NavLink to="/profile" className={({ isActive }) => (isActive ? 'active' : '')}>Profil</NavLink>
                         <button onClick={handleLogout} className="logout-button">Logout</button>
                     </>
                 ) : (
                     <>
                         {/* Link-uri pentru vizitator */}
-                        <Link to="/login">Login</Link>
-                        <Link to="/register">Register</Link>
+                        <NavLink to="/login" className={({ isActive }) => (isActive ? 'active' : '')}>Login</NavLink>
+                        <NavLink to="/register" className={({ isActive }) => (isActive ? 'active' : '')}>Register</NavLink>
                     </>
                 )}
             </nav>

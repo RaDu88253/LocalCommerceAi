@@ -9,6 +9,14 @@ const PlusIcon = () => (
     </svg>
 );
 
+// --- Iconiță pentru cardul de prezentare ---
+const StorefrontIcon = () => (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#a855f7" /><stop offset="100%" stopColor="#752699" /></linearGradient></defs>
+        <path d="M12 3L2 12h3v8h14v-8h3L12 3zm-2 15v-4h4v4H10z" fill="url(#grad1)"/>
+    </svg>
+);
+
 function MainPage() {
     const [messages, setMessages] = useState([
         // Initial AI message
@@ -17,6 +25,7 @@ function MainPage() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isChatActive, setIsChatActive] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false); // Stare pentru a controla tranziția
     const chatEndRef = useRef(null);
 
     // Scroll to the bottom of the chat on new messages
@@ -27,7 +36,12 @@ function MainPage() {
     const handleSend = async (e) => {
         e.preventDefault();
         if (input.trim() && !isLoading) {
-            if (!isChatActive) setIsChatActive(true);
+            // Începe tranziția la primul mesaj
+            if (!isChatActive) {
+                setIsTransitioning(true);
+                // Setează chat-ul ca activ după ce animația de fade-out are timp să ruleze
+                setTimeout(() => setIsChatActive(true), 300); 
+            }
             const userMessage = { id: Date.now(), text: input, sender: 'user' };
             setMessages(prev => [...prev, userMessage]);
             setInput('');
@@ -113,19 +127,27 @@ function MainPage() {
             <div className="chat-window">
                 {/* Welcome screen, which will fade out */}
                 {!isChatActive && (
-                    <div className="welcome-container" onAnimationEnd={() => { if(isChatActive) document.querySelector('.welcome-container').style.display = 'none'; }}>
+                    <div className={`welcome-container ${isTransitioning ? 'fading-out' : ''}`} >
                         <div className="welcome-logo">find.</div>
                         <h1 className="welcome-title">Cum te pot ajuta astăzi?</h1>
                         <h3 className="suggestions-label">Câteva sugestii:</h3>
                         <div className="suggestion-chips">
                             <button onClick={() => handleSuggestionClick('Caut o rochie de seară unică')} className="chip">"Caut o rochie de seară unică"</button>
-                            <button onClick={() => handleSuggestionClick('Găsește-mi un cadou de la un artizan local')} className="chip">"Găsește-mi un cadou de la un artizan local"</button>
+                            <button onClick={() => handleSuggestionClick('Găsește-mi un cadou de la un designer local')} className="chip">"Găsește-mi un cadou de la un designer local"</button>
                             <button onClick={() => handleSuggestionClick('Recomandă-mi un designer roman')} className="chip">"Recomandă-mi un designer roman"</button>
                         </div>
+
+                        {/* Single Feature Box */}
+                        <div className="single-feature-box">
+                            <div className="feature-box-icon"><StorefrontIcon /></div>
+                            <h4 className="feature-box-title">Susținem afacerile mici</h4>
+                            <p className="feature-box-description">Te conectăm cu cele mai bune ateliere și magazine locale din zona ta.</p>
+                        </div>
+
                     </div>
                 )}
 
-                <div className="messages-list">
+                <div className={`messages-list ${isChatActive ? 'visible' : ''}`}>
                     {/* Render messages only after the chat becomes active */}
                     {isChatActive && messages.map(message => (
                             <div key={message.id} className={`message-container ${message.sender}`}>
@@ -152,6 +174,7 @@ function MainPage() {
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Scrie-i ceva lui find..."
                         className="chat-input"
+                        disabled={isLoading}
                     />
                     <button type="submit" className="send-button" disabled={isLoading}>
                         {/* Send Icon SVG */}
