@@ -1,310 +1,146 @@
-
-
-import json
-from typing import List, TypedDict, Annotated
 import os
-
-from langchain_core.messages import BaseMessage
-from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
-from langchain_openai import ChatOpenAI
+from typing import TypedDict, Annotated, List
+from langchain_core.messages import BaseMessage, SystemMessage
 from langgraph.graph import StateGraph, END
-from langgraph.graph.message import add_messages
 
-from .tools import ShoppingTool
-from urllib.parse import urlparse
+from .tools import find_local_businesses, search_product_at_store, Business
+from langchain_openai import ChatOpenAI
 
-# --- State Definition ---
-
-class Product(TypedDict):
-    """Represents a product found at a local store."""
-    item_name: str
-    price: float
-    description: str
-    store_name: str
-    store_address: str
-    url: str
-
-class AgentState(TypedDict):
-    """Defines the state of our shopping agent graph."""
+# --- Agent State ---
+class ShoppingAgentState(TypedDict):
     user_query: str
-    user_location: str
-    parsed_query: dict
-    local_stores: List[dict]  # Will store {'name': str, 'website': str}
-    product_options: List[Product]
-    messages: Annotated[list, add_messages]
+    user_location: dict
+    messages: Annotated[List[BaseMessage], lambda x, y: x + y]
+    search_keywords: str  # Keywords extracted for searching
+    main_product: str # The main product category, e.g., "jacket"
+    businesses: List[Business]
+    
+
+# --- LLM Configuration ---
+# Ensure you have OPENAI_API_KEY set in your .env file
+llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 # --- Agent Nodes ---
-
-# Use a free, local model for query parsing.
-llm = ChatOpenAI(model="gpt-4.1-nano", api_key=os.environ.get("OPENAI_API_KEY"))
-
-class ExtractedProductInfo(BaseModel):
-    """Represents product info extracted from a webpage."""
-    item: str = Field(description="The core clothing item described in the text.")
-    color: str = Field(description="The primary color of the clothing item.")
-
-shopping_tool = ShoppingTool()
-
-class ParsedQuery(BaseModel):
-    """Structured output for a user's shopping query."""
-    item: str = Field(description="The core clothing item the user is looking for.")
-    attributes: List[str] = Field(description="A list of descriptive attributes like color, material, style, etc.")
-
-async def query_parser_node(state: AgentState):
+def query_extractor_node(state: ShoppingAgentState):
     """
-    Analizează interogarea utilizatorului într-un format structurat folosind un model lingvistic avansat.
+    Extracts relevant search keywords from the user's query using an LLM.
+    Example: "Vreau să cumpăr o jachetă neagră de piele" -> "jachetă neagră de piele".
     """
-    print("---📝 Analiza interogării utilizatorului cu GPT---")
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "Ești un expert în analizarea interogărilor de cumpărături. Scopul tău este să extragi obiectul vestimentar de bază (substantivul la singular) și atributele sale descriptive. Nu deduce locația."),
-        ("user", "Utilizatorul dorește să cumpere: {query}")
-    ])
+    user_query = state["user_query"]
     
-    # Folosește .with_structured_output pentru a obține un JSON curat
-    parser_llm = llm.with_structured_output(ParsedQuery)
-    chain = prompt | parser_llm
-    parsed_output = await chain.ainvoke({"query": state["user_query"]})
+    extraction_prompt = f"""
+    From the following user query, extract the specific product with its attributes, and also the main product category.
+    Return a JSON object with two keys: "search_keywords" and "main_product".
 
-    print(f"---✅ Interogare analizată cu succes ---")
-    print(f"  - Obiect: {parsed_output.item}")
-    print(f"  - Atribute: {parsed_output.attributes}\n")
-
-    return {"parsed_query": parsed_output.dict()}
-
-
-def score_business(store: dict, business_context: str, anaf_status: bool) -> float:
-    """
-    Calculates a 'small business' score. A lower score is better.
-    Uses multiple data sources for a robust, localized analysis.
-    """
-    # Normalize the number of ratings. More ratings = higher score (less desirable).
-    ratings_count = store.get('user_ratings_total', 0)
-    score = min(ratings_count, 500) / 50
-
-    # Check for corporate keywords in the secondary search context
-    corporate_keywords = ["locații", "franciză", "investitori", "acțiuni", "carieră", "internațional"]
-    context_lower = business_context.lower()
-    for keyword in corporate_keywords:
-        if keyword in context_lower:
-            print(f"      -> Found corporate keyword '{keyword}'. Penalizing score.")
-            score += 5 # Apply a heavy penalty
-
-    # Heavily reward businesses that are verified, active taxpayers with ANAF.
-    if anaf_status:
-        print("      -> ANAF status confirmed. Applying major bonus.")
-        score -= 10 # This is a very strong positive signal
-    else:
-        score += 2 # Unverified businesses are slightly penalized
-
-    # Check business types. 'boutique' is a good sign, 'department_store' is not.
-    types = store.get('types', [])
-    if 'boutique' in types:
-        score -= 2  # Bonus for being a boutique
-    if 'department_store' in types:
-        score += 5  # Penalty for being a department store
-
-    return score
-
-async def location_finder_node(state: AgentState):
-    """Finds local stores using the shopping tool."""
-    print("---📍 Finding Local Stores---")
-    item = state.get("parsed_query", {}).get("item", "")
-    location = state["user_location"]
+    Example:
+    User query: "Vreau să cumpăr o jachetă neagră de piele."
+    Output: {{"search_keywords": "jachetă neagră de piele", "main_product": "jachetă"}}
     
-    # Use the new Google Maps tool. Search for both the item and generic terms.
-    search_query = f"{item} OR clothing boutique OR magazin de haine"
-    store_results = shopping_tool.find_local_stores_gmaps(search_query, location_coords=location)
-
-    # --- Restore printing of all store names ---
-    print("\n---🗺️ All Stores Found by Google Maps: ---")
-    if not store_results:
-        print("  -> No stores found in the area.")
-    else:
-        # Print the full JSON object for each store for detailed inspection
-        print(json.dumps(store_results, indent=2, ensure_ascii=False))
-    print("------------------------------------------\n")
-
-    # --- Correctly print all found websites ---
-    print("\n---🗺️ All Websites Found by Google Maps: ---")
-    all_websites = [store.get("website") for store in store_results if store.get("website")]
-    if not all_websites:
-        print("  -> No websites were listed in the Google Maps results.")
-    for website in all_websites:
-        print(f"  - {website}")
-    print("------------------------------------------\n")
-
-    # Filter for stores that have a real website, not just a social media page.
-    social_media_domains = ["facebook.com", "instagram.com", "twitter.com", "x.com", "linkedin.com", "tiktok.com"]
-    online_stores = []
-    invalid_websites = []
-    for store in store_results:
-        website = store.get("website")
-        if not website:
-            continue
-
-        # Use urlparse to reliably get the domain name for checking
-        domain_name = urlparse(website).netloc.replace("www.", "")
-        if domain_name in social_media_domains:
-            invalid_websites.append(website)
-        else:
-            online_stores.append(store)
-
-    print("\n---🗺️  Filtered Google Maps Search Results (with valid websites): ---")
-    print(f"(Found {len(store_results)} total, {len(online_stores)} have valid websites)")
+    User query: "{user_query}"
+    """
     
-    # If no valid websites are found, list the invalid ones that were filtered out.
-    if not online_stores and invalid_websites:
-        print("\n---🚫 Invalid or Social Media Websites Found: ---")
-        for website in invalid_websites:
-            print(f"  - {website}")
+    response = llm.invoke([SystemMessage(content=extraction_prompt)])
+    import json
+    # The LLM should return a JSON string, so we parse it.
+    extracted_data = json.loads(response.content)
+    
+    return {"search_keywords": extracted_data.get("search_keywords"), "main_product": extracted_data.get("main_product")}
 
-    print("----------------------------------------------------------------\n")
-    # Score each business using the enhanced scoring function
-    scored_stores = []
-    print("---🔢 Calculating Business Scores: ---")
-    for store in online_stores:
-        store_name = store.get("name")
-        if not store_name:
-            continue
-        # Gather data from all our new tools
-        context = shopping_tool.check_business_scale(store_name)
-        cui = shopping_tool.get_business_cui(store_name)
-        anaf_ok = shopping_tool.verify_anaf_status(cui) if cui else False
+def business_finder_node(state: ShoppingAgentState):
+    """This node runs the tool to find businesses."""
+    # Use the original user_query for finding general store types
+    tool_output = find_local_businesses(state) 
+    return {"businesses": tool_output.get("businesses", [])}
 
-        score = score_business(store, context, anaf_ok)
-        print(f"  - Store: '{store_name}', Score: {score:.2f}")
-        scored_stores.append((store, score))
+def product_search_node(state: ShoppingAgentState):
+    """This node searches for the product on each business's website."""
+    # Use the extracted keywords for a precise product search
+    search_keywords = state["search_keywords"]
+    main_product = state["main_product"]
+    businesses = state["businesses"]
+    
+    for business in businesses:
+        if business.get("website"):
+            business["product_found"] = False
+            business["product_url"] = None
 
-    sorted_stores = sorted(scored_stores, key=lambda item: item[1])
-    print("\n---🏆 Final Sorted Businesses (Top 3): ---")
-    for store, score in sorted_stores[:3]:
-        print(f"  - Store: '{store['name']}', Final Score: {score:.2f}")
-    print("------------------------------------------\n")
+            search_response = search_product_at_store(business["website"], search_keywords)
+            search_results = search_response.get("results", [])
 
-    return {"local_stores": sorted_stores}
+            # Iterăm prin rezultatele căutării pentru o verificare inteligentă
+            for result in search_results:
+                page_content = result.get("content", "")
+                page_url = result.get("url")
 
-async def product_searcher_node(state: AgentState):
-    """Searches for the product in each identified local store."""
-    print("---🛍️ Searching for Products in Stores---")
-    # Use the parsed English terms for searching
-    parsed_query = state.get("parsed_query", {})
-    item = parsed_query.get("item", "")
-    attributes = parsed_query.get("attributes", [])
-    product_query = f"{item} {' '.join(attributes)}".strip()
-
-    stores = state["local_stores"]
-    all_product_options = []
-
-    # --- New Tiered Search Logic ---
-    tier1_stores = [s[0] for s in stores[:3]]      # Top 3 small businesses
-    tier2_stores = [s[0] for s in stores[3:10]]   # Next 7 medium businesses
-    tier3_stores = [s[0] for s in stores[10:]]     # All other large businesses
-
-    search_tiers = [
-        ("Nivel 1 (Magazine Mici)", tier1_stores),
-        ("Nivel 2 (Magazine Medii)", tier2_stores),
-        ("Nivel 3 (Magazine Mari)", tier3_stores)
-    ]
-
-    for tier_name, tier_stores in search_tiers:
-        if not tier_stores:
-            continue
-
-        print(f"\n--- Căutare în {tier_name} ---")
-        for store in tier_stores:
-            store_name = store.get("name")
-            store_website = store.get("website")
-            if not store_website:
-                continue
-
-            product_results_json = shopping_tool.search_product_at_store(store_website, product_query)
-            try:
-                product_results = json.loads(product_results_json)
-            except json.JSONDecodeError:
-                print(f"      -> ⚠️  Could not decode search results for {store_name}. Skipping.")
-                continue
-
-            for res in product_results:
-                product_url = res.get('url')
-                if not product_url:
-                    continue
-
-                # --- New: Validate that the product URL belongs to the store's website ---
-                store_domain = urlparse(store_website).netloc.replace("www.", "")
-                product_domain = urlparse(product_url).netloc.replace("www.", "")
-                if store_domain not in product_domain:
-                    print(f"      -> ❌ Discarding link to different domain: {product_url}")
-                    continue
-
-                # Scrape the actual page content for a much better validation
-                page_content = shopping_tool.scrape_website_content(product_url)
-                if not page_content:
-                    continue
+                verification_prompt = f"""
+                Analyze the following text from a webpage.
+                First, does it confirm that the specific product "{search_keywords}" is available for sale?
+                If not, does it at least strongly suggest that the general product category "{main_product}" is sold on this page (e.g., it's a category page)?
                 
-                truncated_content = page_content
+                Answer with "yes" for the specific product, "category" for the general product, or "no" if neither is likely.
 
-                # --- New Keyword-Based Validation ---
-                page_content_lower = truncated_content.lower()
+                Text: "{page_content}"
+                """
+                response = llm.invoke([SystemMessage(content=verification_prompt)])
+                answer = response.content.strip().lower()
 
-                # 1. Item must be an exact match (any of its synonyms must be present)
-                item_match = item.lower() in page_content_lower
-                if not item_match:
-                    print(f"      -> ❌ Discarding: Item not found in page content for {product_url}")
-                    continue
+                if "yes" in answer or "category" in answer:
+                    # Am găsit o potrivire confirmată de LLM
+                    business["product_found"] = True
+                    business["product_url"] = page_url
+                    break # Oprim căutarea la primul rezultat confirmat
 
-                all_product_options.append({
-                    "store_name": store_name,
-                    "item_name": res.get("title"),
-                    "url": res.get("url"),
-                    "description": res.get("content"),
-                    "price": "Price not found",
-                })
-            
-        # După ce a căutat în TOATE magazinele din nivelul curent, verifică dacă a găsit ceva.
-        # Dacă da, se oprește și returnează rezultatele, fără a mai trece la nivelurile următoare.
-        if all_product_options:
-            print(f"\n--- ✅ Am găsit rezultate în {tier_name}. Se oprește căutarea. ---\n")
-            return {"product_options": all_product_options}
+    return {"businesses": businesses}
 
-    return {"product_options": all_product_options}
+def response_synthesizer_node(state: ShoppingAgentState):
+    """
+    This node synthesizes the final, user-facing response based on
+    the businesses found and product search results.
+    """
+    system_prompt = """You are a helpful local shopping assistant.
+Your goal is to help users find products from local businesses.
+Based on the list of businesses provided, generate a friendly, helpful, and concise response in Romanian. Do not add any descriptions.
 
-async def results_synthesizer_node(state: AgentState):
-    """Synthesizes the final response to the user."""
-    print("---✨ Synthesizing Final Response---")
-    if not state["product_options"]:
-        return {"messages": [("assistant", "I'm sorry, I couldn't find any matching items in small local stores near you. You could try broadening your search!")]}
+For each business, include its name and address.
+If the product was found on their website, you MUST provide the direct link to the product page. If not, or if they don't have a website, say that the availability should be checked directly at their physical location. Do not include Google Maps links.
+If no businesses were found, apologize and say you couldn't find any matching local stores.
 
-    # --- New: Bypass the LLM for formatting and construct the response directly ---
-    intro = "I found a few great options for you from local businesses! Here they are:\n\n"
-    product_summary = []
-    for option in state["product_options"]:
-        item_name = option.get('item_name', 'N/A')
-        store_name = option.get('store_name', 'N/A')
-        url = option.get('url', 'N/A')
-        # Ensure store_name is a string, not a dictionary
-        if isinstance(store_name, dict):
-            store_name = store_name.get('name', 'N/A')
-        summary = f"**Item:** {item_name}\n**Store:** {store_name}\n**Link:** {url}\n"
-        product_summary.append(summary)
+Here is the list of businesses and their details:
+{businesses}
+"""
     
-    final_response_text = intro + "\n".join(product_summary)
+    # Sort businesses by score in ascending order to show smaller ones first.
+    sorted_businesses = sorted(state["businesses"], key=lambda b: b.get("score", float('inf')))
+
+    business_strings = []
+    for b in sorted_businesses:
+        link_info = f"Link produs: {b['product_url']}" if b.get("product_found") and b.get("product_url") else "Verifică disponibilitatea în magazin."
+        business_strings.append(f"- Nume: {b['name']}, Adresă: {b['address']}. {link_info}")
     
-    return {"messages": [("assistant", final_response_text)]}
+    business_list_str = "\n".join(business_strings)
+    
+    if not state["businesses"]:
+        business_list_str = "No businesses found."
+
+    final_prompt = system_prompt.format(businesses=business_list_str)
+    
+    response = llm.invoke([SystemMessage(content=final_prompt)] + state["messages"])
+    return {"messages": [response]}
 
 # --- Graph Definition ---
+builder = StateGraph(ShoppingAgentState)
 
-graph_builder = StateGraph(AgentState)
+# Define the nodes
+builder.add_node("extract_keywords", query_extractor_node)
+builder.add_node("find_businesses", business_finder_node)
+builder.add_node("search_for_product", product_search_node)
+builder.add_node("synthesize_response", response_synthesizer_node)
 
-graph_builder.add_node("query_parser", query_parser_node)
-graph_builder.add_node("location_finder", location_finder_node)
-graph_builder.add_node("product_searcher", product_searcher_node)
-graph_builder.add_node("results_synthesizer", results_synthesizer_node)
+# Define the edges
+builder.set_entry_point("extract_keywords")
+builder.add_edge("extract_keywords", "find_businesses")
+builder.add_edge("find_businesses", "search_for_product")
+builder.add_edge("search_for_product", "synthesize_response")
+builder.add_edge("synthesize_response", END)
 
-graph_builder.set_entry_point("query_parser")
-graph_builder.add_edge("query_parser", "location_finder")
-graph_builder.add_edge("location_finder", "product_searcher")
-graph_builder.add_edge("product_searcher", "results_synthesizer")
-graph_builder.add_edge("results_synthesizer", END)
-
-shopping_graph = graph_builder.compile()
+shopping_graph = builder.compile()
