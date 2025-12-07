@@ -21,6 +21,7 @@ class Business(TypedDict):
     website: Optional[str]
     product_url: Optional[str]
     score: int
+    attribute_match_score: int
 
 def get_gmaps_client():
     """Initializes and returns a Google Maps client."""
@@ -79,18 +80,24 @@ def find_local_businesses(state: Dict) -> Dict:
         # Gracefully handle missing API keys instead of crashing the server.
         gmaps = get_gmaps_client()
         get_tavily_client() # We call this just to validate the key is present.
+
+        # Refine the search keyword to prioritize smaller, local stores.
+        refined_keyword = f"magazin haine local boutique {user_query}"
+
     except ValueError as e:
         logger.error(f"API Key Error: {e}")
         return {"businesses": [], "error": f"A required API key is not configured on the server: {e}"}
     try:
         places_result = gmaps.places_nearby(
             location=user_location,
-            keyword=user_query,
+            keyword=refined_keyword,
             radius=search_radius,
             language="ro",
             type="clothing_store"
         )
         
+        # The Google Maps API returns up to 20 results per page by default, which matches the request.
+        # If more were needed, we would handle pagination here using `places_result.get('next_page_token')`.
         verified_businesses: List[Business] = []
         for place in places_result.get("results", []):
             place_name = place.get("name")
@@ -138,9 +145,8 @@ def search_product_at_store(business_website: str, product_query: str) -> Dict:
     
     try:
         tavily = get_tavily_client()
-        # Use Tavily's site: search operator for a targeted search
-        search_query = f"'{product_query}' site:{business_website}"
-        results = tavily.search(query=search_query, max_results=3)
+        # The query is already fully constructed in the graph, so we use it directly.
+        results = tavily.search(query=product_query, max_results=3)
         return {"results": results.get('results', [])}
     except Exception as e:
         logger.error(f"An error occurred during product search: {e}")
