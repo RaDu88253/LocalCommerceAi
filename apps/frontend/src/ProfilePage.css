@@ -13,11 +13,11 @@
     max-width: 500px;
     background-color: white;
     border-radius: 20px;
-    padding: 2.5rem;
+    padding: 1.5rem 2rem; /* Reduced vertical padding */
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.25rem; /* Reduced gap between sections */
 }
 
 /* --- Header Section --- */
@@ -26,21 +26,21 @@
 }
 
 .avatar {
-    width: 100px;
-    height: 100px;
+    width: 70px; /* Smaller avatar */
+    height: 70px;
     border-radius: 50%;
     background-color: #752699;
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.5rem;
+    font-size: 1.75rem; /* Smaller initials */
     font-weight: 600;
-    margin: 0 auto 1rem auto;
+    margin: 0 auto 0.75rem auto; /* Reduced bottom margin */
 }
 
 .user-name {
-    font-size: 1.75rem;
+    font-size: 1.5rem; /* Smaller name */
     font-weight: 700;
     color: #752699;
     margin: 0;
@@ -60,7 +60,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0;
-    padding-bottom: 0.5rem;
+    padding-bottom: 0.25rem; /* Reduced padding */
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -74,19 +74,21 @@
     font-size: 0.875rem;
     font-weight: 500;
     color: #4b5563;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem; /* Reduced margin */
 }
 
 .input-group input {
     width: 100%;
-    padding: 0.75rem 1rem;
-    border: 1px solid #d1d5db;
+    padding: 0.6rem 1rem; /* Reduced input height */
+    border: none; /* Eliminăm bordura pentru a ne baza pe umbră */
     border-radius: 12px;
     background-color: #f9fafb;
     font-size: 1rem;
     color: #374151;
     outline: none;
     box-sizing: border-box;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06); /* Adăugăm umbra interioară pentru profunzime */
+    transition: box-shadow 0.2s, border-color 0.2s; /* Adăugăm o tranziție lină */
 }
 
 .input-group input:focus {
@@ -134,7 +136,7 @@
 
 /* --- Footer Section --- */
 .profile-footer {
-    margin-top: 1rem;
+    margin-top: 0.5rem; /* Reduced top margin */
 }
 
 .logout-button-profile {
