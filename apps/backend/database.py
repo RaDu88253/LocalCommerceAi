@@ -1,8 +1,11 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite:///./localcommerce.db"
+# Folosește URL-ul din variabilele de mediu dacă există (pentru producție),
+# altfel folosește SQLite pentru dezvoltare locală.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./localcommerce.db")
 
 engine = create_engine(
     DATABASE_URL, connect_args={"check_same_thread": False} # check_same_thread este necesar doar pentru SQLite
