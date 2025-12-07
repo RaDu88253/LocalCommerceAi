@@ -30,6 +30,7 @@ def upgrade() -> None:
     sa.Column('last_name', sa.String(), nullable=False),
     sa.Column('phone_number', sa.String(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('subscription_type', sa.String(), nullable=False, server_default='free'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
