@@ -166,7 +166,7 @@ function RegisterPage() {
     }
 
     if (!passwordRegex.test(formData.password)) {
-      setPasswordError("Parola trebuie să aibă minim 8 caractere, o majusculă, o cifră și un caracter special.");
+      setPasswordError("Parola trebuie să aibă minimum 8 caractere, o majusculă, o cifră și un caracter special.");
       return;
     }
 

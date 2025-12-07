@@ -77,7 +77,11 @@ async def run_shopping_assistant(request: ShoppingRequest):
     final_state = await shopping_graph.ainvoke(initial_state)
     final_message = final_state["messages"][-1]
 
-    return {"response": final_message.content}
+    # Split the response content by newlines to create a list of strings.
+    # This is a safer way for the frontend to handle multi-line text.
+    response_lines = final_message.content.split('\n')
+
+    return {"response_lines": response_lines}
 
 @app.get("/api/hello")
 def read_root():
